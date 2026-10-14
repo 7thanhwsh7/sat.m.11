@@ -394,6 +394,10 @@
   .pdfRoot .pdfOpt.key{border:2px solid #1f8a4c;background:#e8f7ee;}
   .pdfRoot .pdfOpt.key .pdfLetter{background:#1f8a4c;border-color:#1f8a4c;color:#fff;}
   .pdfRoot .pdfAnsBox.key i{font-style:normal;color:#1f8a4c;border-color:#1f8a4c;background:#e8f7ee;line-height:26px;padding-left:10px;font-size:14px;}
+  .pdfRoot table td{padding:3px 14px !important;}
+  .pdfRoot .pdfOpt table{font-size:11.5px !important;margin:0 auto !important;}
+  .pdfRoot .pdfOptGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px;}
+  .pdfRoot .pdfOptGrid .pdfOpt{margin-top:0;align-items:flex-start;padding:8px 10px;}
   .pdfRoot .pdfModHead{font-size:18px;font-weight:700;color:#0d3b8c;border-bottom:2px solid #0d3b8c;padding-bottom:4px;margin:18px 0 4px;}
   .pdfRoot .pdfKeyTable{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
   .pdfRoot .pdfKeyTable th,.pdfRoot .pdfKeyTable td{border:1px solid #c9ced6;padding:7px 10px;text-align:center;}
@@ -1803,10 +1807,13 @@ function buildTestPdfHtml(mode){
         b += withKey ? '<div class="pdfAnsBox key">Answer:<i>' + escapeHtml(keyStr(q)) + '</i></div>'
                      : '<div class="pdfAnsBox">Your answer:<i></i></div>';
       } else {
+        const grid = (q.options || []).some(o => String(o).indexOf('<table') >= 0);
+        if(grid) b += '<div class="pdfOptGrid">';
         (q.options || []).forEach((opt, j) => {
           const isKey = withKey && LETTERS[j] === q.correctKey;
-          b += '<div class="pdfOpt' + (isKey ? ' key' : '') + '"><span class="pdfLetter">' + LETTERS[j] + '</span><span>' + opt + '</span></div>';
+          b += '<div class="pdfOpt' + (isKey ? ' key' : '') + '"><span class="pdfLetter">' + LETTERS[j] + '</span><span style="flex:1;">' + opt + '</span></div>';
         });
+        if(grid) b += '</div>';
       }
       html += b + '</div>';
     });
@@ -1859,7 +1866,7 @@ function makeTestPDF(mode){
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['css', 'legacy'], avoid: ['.question-block', 'tr'] }
+    pagebreak: { mode: ['css', 'legacy'], avoid: ['.question-block', '.pdfQBox', '.pdfOpt', '.pdfAnsBox', 'svg', 'table', 'tr'] }
   };
   const btns = [document.getElementById('dlKeyBtn'), document.getElementById('dlSepBtn')];
   btns.forEach(b => b.disabled = true);
