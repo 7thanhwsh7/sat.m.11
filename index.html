@@ -597,8 +597,8 @@
 <div class="modalOverlay" id="downloadModal">
   <div class="modalBox" style="max-width:460px;">
     <h2>Tải đề (PDF)</h2>
-    <p style="margin-top:-4px;">Dành cho giáo viên. Nhập mã giáo viên rồi chọn kiểu tải.</p>
-    <input type="password" id="dlCode" placeholder="Mã giáo viên" autocomplete="off"
+    <p style="margin-top:-4px;">Dành cho giáo viên. Nhập Answer Code của đề rồi chọn kiểu tải.</p>
+    <input type="password" id="dlCode" placeholder="Answer Code của đề" autocomplete="off"
       style="width:100%;padding:10px 12px;border:1px solid #c9ced6;border-radius:4px;font-size:14px;">
     <button class="dlOpt" id="dlKeyBtn" onclick="downloadTestPDF('key')"><b>Đề có key</b><span>Đáp án đúng được tô màu xanh ngay trong từng câu.</span></button>
     <button class="dlOpt" id="dlSepBtn" onclick="downloadTestPDF('sep')"><b>Đề riêng + key trang cuối</b><span>Đề sạch để phát cho học sinh, bảng đáp án ở trang cuối.</span></button>
@@ -649,7 +649,6 @@ const TEST_NAME = "Test 11 M";   // đổi cho mỗi đề — phải trùng tê
 const TEST_SECTION = "M";
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyJcjvbCi9xqa0NR-TGyJvpjvqJkcGHKA-x_uw6kazLVng3jKZgsqJg55ae7pPaYmWO_w/exec";
 const TIME_LIMIT_MINUTES = 35;   // thời gian cho MỖI module
-const TEACHER_PDF_CODE = "gedu";   // mã giáo viên để tải đề PDF (đổi tùy ý)
 
 /* Sample question data.
    id, domain (internal note only, never shown to students), questionText,
@@ -1825,8 +1824,29 @@ function buildTestPdfHtml(mode){
   return html + '</div>';
 }
 
+/* Mã tải đề = mã Answer Code của đề này (lấy từ Apps Script, giống nút View Answers) */
 function downloadTestPDF(mode){
-  if(document.getElementById('dlCode').value.trim() !== TEACHER_PDF_CODE){ alert('Sai mã giáo viên.'); return; }
+  const code = document.getElementById('dlCode').value.trim();
+  if(!code){ alert('Nhập mã Answer Code của đề.'); return; }
+  const btns = [document.getElementById('dlKeyBtn'), document.getElementById('dlSepBtn')];
+  btns.forEach(b => b.disabled = true);
+  const cbName = 'gedu_dl_' + Date.now();
+  const script = document.createElement('script');
+  let done = false;
+  const cleanup = () => { done = true; delete window[cbName]; script.remove(); };
+  window[cbName] = function(data){
+    cleanup();
+    const real = data && data.code ? String(data.code).trim().toLowerCase() : '';
+    if(!real){ btns.forEach(b => b.disabled = false); alert('Đề này chưa có Answer Code trên sheet.'); return; }
+    if(real !== code.toLowerCase()){ btns.forEach(b => b.disabled = false); alert('Sai mã Answer Code.'); return; }
+    makeTestPDF(mode);
+  };
+  script.onerror = function(){ if(done) return; cleanup(); btns.forEach(b => b.disabled = false); alert('Không kết nối được máy chủ. Thử lại.'); };
+  script.src = WEBAPP_URL + '?' + new URLSearchParams({ action: 'getUnlockCode', test_name: TEST_NAME, section: TEST_SECTION, callback: cbName }).toString();
+  document.body.appendChild(script);
+}
+
+function makeTestPDF(mode){
   if(typeof html2pdf === 'undefined'){ alert('Không tải được thư viện PDF. Kiểm tra kết nối mạng và thử lại.'); return; }
   const holder = document.createElement('div');
   holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:720px;background:#fff;';
